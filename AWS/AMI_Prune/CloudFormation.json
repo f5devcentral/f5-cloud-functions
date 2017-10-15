@@ -1,0 +1,138 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "AWS CloudFormation AMI Prune Stack",
+  "Resources": {
+    "AMIPruneRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [
+                  "lambda.amazonaws.com"
+                ]
+              },
+              "Action": [
+                "sts:AssumeRole"
+              ]
+            }
+          ]
+        },
+        "Path": "/"
+      }
+    },
+    "AMIPrunePolicy": {
+      "DependsOn": [
+        "AMIPruneRole"
+      ],
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyName": "AMIPrunePolicy",
+        "Roles": [
+          {
+            "Ref": "AMIPruneRole"
+          }
+        ],
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": [
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:PutLogEvents"
+              ],
+              "Resource": "arn:aws:logs:*:*:*"
+            },
+            {
+              "Effect": "Allow",
+              "Action": [
+                "ec2:DeregisterImage",
+                "ec2:DescribeImages",
+				"ec2:DescribeSnapshots",
+                "ec2:DeleteSnapshot"
+              ],
+              "Resource": "*"
+            }
+          ]
+        }
+      }
+    },
+    "AMIPrune": {
+      "Type": "AWS::Lambda::Function",
+      "DependsOn": [
+        "AMIPrunePolicy"
+      ],
+      "Properties": {
+        "FunctionName": "AMIPrune",
+        "Code": {
+          "S3Bucket": "f5-cloud-functions",
+          "S3Key": "prune.zip"
+        },
+        "Role": {
+          "Fn::GetAtt": [
+            "AMIPruneRole",
+            "Arn"
+          ]
+        },
+        "Timeout": 300,
+        "Handler": "prune.lambda_handler",
+        "Runtime": "python2.7",
+        "MemorySize": 128,
+        "Environment": {
+          "Variables": {
+            "threshold_days": "30",
+            "enable_delete": "false",
+            "region": "us-east-1",
+            "limit": "400"
+          }
+        }
+      }
+    },
+    "AMIPruneRule": {
+      "Type": "AWS::Events::Rule",
+      "DependsOn": [
+        "AMIPrune"
+      ],
+      "Properties": {
+        "Description": "ScheduledRule",
+        "ScheduleExpression": "rate(1 day)",
+        "State": "ENABLED",
+        "Targets": [
+          {
+            "Arn": {
+              "Fn::GetAtt": [
+                "AMIPrune",
+                "Arn"
+              ]
+            },
+            "Id": "TargetFunction"
+          }
+        ]
+      }
+    },
+    "AMIPrunePermission": {
+      "Type": "AWS::Lambda::Permission",
+      "DependsOn": [
+        "AMIPruneRule"
+      ],
+      "Properties": {
+        "FunctionName": {
+          "Ref": "AMIPrune"
+        },
+        "Action": "lambda:InvokeFunction",
+        "Principal": "events.amazonaws.com",
+        "SourceArn": {
+          "Fn::GetAtt": [
+            "AMIPruneRule",
+            "Arn"
+          ]
+        }
+      }
+    }
+  }
+}

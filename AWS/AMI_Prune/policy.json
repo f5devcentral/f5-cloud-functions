@@ -1,0 +1,25 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:PutLogEvents"
+            ],
+            "Resource": "arn:aws:logs:*:*:*"
+        },
+        {
+            "Sid": "Stmt1498686545466",
+            "Action": [
+                "ec2:DeregisterImage",
+                "ec2:DescribeImages",
+                "ec2:DeleteSnapshot",
+                "ec2:DescribeSnapshots"
+            ],
+            "Effect": "Allow",
+            "Resource": "*"
+        }
+    ]
+}
