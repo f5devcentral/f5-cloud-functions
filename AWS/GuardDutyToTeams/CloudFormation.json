@@ -1,0 +1,416 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "AWS CloudFormation to send GuardDuty alerts to Microsoft Teams",
+  "Resources": {
+    "GuardDutyRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [
+                  "lambda.amazonaws.com"
+                ]
+              },
+              "Action": [
+                "sts:AssumeRole"
+              ]
+            }
+          ]
+        },
+        "Path": "/"
+      }
+    },
+    "GuardDutyPolicy": {
+      "DependsOn": [
+        "GuardDutyRole"
+      ],
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyName": "GuardDutyPolicy",
+        "Roles": [
+          {
+            "Ref": "GuardDutyRole"
+          }
+        ],
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": [
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:PutLogEvents",
+                "ec2:CreateNetworkInterface",
+                "ec2:DescribeNetworkInterfaces",
+                "ec2:DeleteNetworkInterface"
+              ],
+              "Resource": "*"
+            }
+          ]
+        }
+      }
+    },
+    "GuardDutyVPC": {
+      "Type": "AWS::EC2::VPC",
+      "Properties": {
+        "CidrBlock": "10.0.0.0/16",
+        "EnableDnsSupport": true,
+        "EnableDnsHostnames": true
+      }
+    },
+    "AllowOutboundSecurityGroup": {
+      "DependsOn": [
+        "GuardDutyVPC"
+      ],
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupName": "allow-outbound",
+        "GroupDescription": "Allow all outbound traffic",
+        "VpcId": {
+          "Ref": "GuardDutyVPC"
+        }
+      }
+    },
+    "GuardDutyPublicSubnet": {
+      "DependsOn": [
+        "GuardDutyVPC"
+      ],
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "CidrBlock": "10.0.0.0/24",
+        "VpcId": {
+          "Ref": "GuardDutyVPC"
+        },
+        "AvailabilityZone": "us-east-1a"
+      }
+    },
+    "GuardDutyPrivateSubnet": {
+      "DependsOn": [
+        "GuardDutyVPC"
+      ],
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "CidrBlock": "10.0.1.0/24",
+        "VpcId": {
+          "Ref": "GuardDutyVPC"
+        },
+        "AvailabilityZone": "us-east-1b"
+      }
+    },
+    "GuardDutyPublicSubnet2": {
+      "DependsOn": [
+        "GuardDutyVPC"
+      ],
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "CidrBlock": "10.0.2.0/24",
+        "VpcId": {
+          "Ref": "GuardDutyVPC"
+        },
+        "AvailabilityZone": "us-east-1c"
+      }
+    },
+    "GuardDutySubnet3": {
+      "DependsOn": [
+        "GuardDutyVPC"
+      ],
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "CidrBlock": "10.0.3.0/24",
+        "VpcId": {
+          "Ref": "GuardDutyVPC"
+        },
+        "AvailabilityZone": "us-east-1d"
+      }
+    },
+    "GuardDutySubnet4": {
+      "DependsOn": [
+        "GuardDutyVPC"
+      ],
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "CidrBlock": "10.0.4.0/24",
+        "VpcId": {
+          "Ref": "GuardDutyVPC"
+        },
+        "AvailabilityZone": "us-east-1e"
+      }
+    },
+    "GuardDutyInternetGateway": {
+      "Type": "AWS::EC2::InternetGateway"
+    },
+    "InternetGatewayAttachment": {
+      "DependsOn": [
+        "GuardDutyVPC",
+        "GuardDutyInternetGateway"
+      ],
+      "Type": "AWS::EC2::VPCGatewayAttachment",
+      "Properties": {
+        "VpcId": {
+          "Ref": "GuardDutyVPC"
+        },
+        "InternetGatewayId": {
+          "Ref": "GuardDutyInternetGateway"
+        }
+      }
+    },
+    "NatPublicIP": {
+      "DependsOn": [
+        "GuardDutyVPC"
+      ],
+      "Type": "AWS::EC2::EIP",
+      "Properties": {
+        "Domain": "vpc"
+      }
+    },
+    "GuardDutyNatGateway": {
+      "DependsOn": [
+        "GuardDutyVPC",
+        "GuardDutyPublicSubnet"
+      ],
+      "Type": "AWS::EC2::NatGateway",
+      "Properties": {
+        "AllocationId": {
+          "Fn::GetAtt": [
+            "NatPublicIP",
+            "AllocationId"
+          ]
+        },
+        "SubnetId": {
+          "Ref": "GuardDutyPublicSubnet"
+        }
+      }
+    },
+    "IGWRouteTable": {
+      "DependsOn": [
+        "GuardDutyVPC"
+      ],
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+        "VpcId": {
+          "Ref": "GuardDutyVPC"
+        }
+      }
+    },
+    "NATRouteTable": {
+      "DependsOn": [
+        "GuardDutyVPC"
+      ],
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+        "VpcId": {
+          "Ref": "GuardDutyVPC"
+        }
+      }
+    },
+    "NatRouteTableExternalRoute": {
+      "DependsOn": [
+        "GuardDutyVPC",
+        "NATRouteTable",
+        "GuardDutyNatGateway"
+      ],
+      "Type": "AWS::EC2::Route",
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "NATRouteTable"
+        },
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "NatGatewayId": {
+          "Ref": "GuardDutyNatGateway"
+        }
+      }
+    },
+    "IGWRouteTableExternalRoute": {
+      "DependsOn": [
+        "GuardDutyVPC",
+        "IGWRouteTable",
+        "GuardDutyInternetGateway",
+        "InternetGatewayAttachment"
+      ],
+      "Type": "AWS::EC2::Route",
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "IGWRouteTable"
+        },
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "GatewayId": {
+          "Ref": "GuardDutyInternetGateway"
+        }
+      }
+    },
+    "PublicSubnetIGWRouteTableAssociation": {
+      "DependsOn": [
+        "GuardDutyVPC",
+        "NATRouteTable",
+        "GuardDutyPublicSubnet"
+      ],
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "IGWRouteTable"
+        },
+        "SubnetId": {
+          "Ref": "GuardDutyPublicSubnet"
+        }
+      }
+    },
+    "PublicSubnet2IGWRouteTableAssociation": {
+      "DependsOn": [
+        "GuardDutyVPC",
+        "NATRouteTable",
+        "GuardDutyPublicSubnet2"
+      ],
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "IGWRouteTable"
+        },
+        "SubnetId": {
+          "Ref": "GuardDutyPublicSubnet2"
+        }
+      }
+    },
+    "PrivateSubnetNATRouteTableAssociation": {
+      "DependsOn": [
+        "GuardDutyVPC",
+        "IGWRouteTable",
+        "GuardDutyPrivateSubnet"
+      ],
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "NATRouteTable"
+        },
+        "SubnetId": {
+          "Ref": "GuardDutyPrivateSubnet"
+        }
+      }
+    },
+    "GuardDutySubnet3NATRouteTableAssociation": {
+      "DependsOn": [
+        "GuardDutyVPC",
+        "IGWRouteTable",
+        "GuardDutySubnet3"
+      ],
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "NATRouteTable"
+        },
+        "SubnetId": {
+          "Ref": "GuardDutySubnet3"
+        }
+      }
+    },
+    "GuardDutySubnet4NATRouteTableAssociation": {
+      "DependsOn": [
+        "GuardDutyVPC",
+        "IGWRouteTable",
+        "GuardDutySubnet4"
+      ],
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "NATRouteTable"
+        },
+        "SubnetId": {
+          "Ref": "GuardDutySubnet4"
+        }
+      }
+    },
+    "GuardDutyService": {
+      "Type": "AWS::GuardDuty::Detector",
+      "Properties": {
+        "Enable": true
+      }
+    },
+    "GuardDutyEvents": {
+      "DependsOn": [
+        "GuardDutyService"
+      ],
+      "Type": "AWS::Events::Rule",
+      "Properties": {
+        "Description": "Receive alerts from GuardDuty",
+        "Name": "GuardDutyAlerts",
+        "State": "ENABLED",
+        "EventPattern": {
+          "source": [
+            "aws.guardduty"
+          ]
+        },
+        "Targets": [
+          {
+            "Arn": {
+              "Fn::GetAtt": [
+                "GuardDutyToTeams",
+                "Arn"
+              ]
+            },
+            "Id": "TargetFunction"
+          }
+        ]
+      }
+    },
+    "GuardDutyEventsPermission": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {
+        "FunctionName": {
+          "Ref": "GuardDutyToTeams"
+        },
+        "Action": "lambda:InvokeFunction",
+        "Principal": "events.amazonaws.com",
+        "SourceArn": {
+          "Fn::GetAtt": [
+            "GuardDutyEvents",
+            "Arn"
+          ]
+        }
+      }
+    },
+    "GuardDutyToTeams": {
+      "Type": "AWS::Lambda::Function",
+      "DependsOn": [
+        "GuardDutyPolicy",
+        "GuardDutySubnet3",
+        "GuardDutySubnet4"
+      ],
+      "Properties": {
+        "FunctionName": "GuardDutyToTeams",
+        "Code": {
+          "S3Bucket": "<S3 BUCKET>",
+          "S3Key": "GuardDutyToTeams.zip"
+        },
+        "Role": {
+          "Fn::GetAtt": [
+            "GuardDutyRole",
+            "Arn"
+          ]
+        },
+        "Timeout": 300,
+        "Handler": "lambda_function.lambda_handler",
+        "Runtime": "python2.7",
+        "MemorySize": 128,
+        "Environment": {
+          "Variables": {
+            "api_url": "",
+            "severity_threshold": "2.0"
+          }
+        },
+        "VpcConfig": {
+          "SecurityGroupIds": [
+            { "Ref": "AllowOutboundSecurityGroup" }
+          ],
+          "SubnetIds": [
+            { "Ref": "GuardDutySubnet3" },
+            { "Ref": "GuardDutySubnet4" }
+          ]
+        }
+      }
+    }
+  }
+}
