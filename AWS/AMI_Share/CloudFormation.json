@@ -1,0 +1,140 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "AWS CloudFormation AMI Share Stack",
+  "Resources": {
+    "AMIShareRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [
+                  "lambda.amazonaws.com"
+                ]
+              },
+              "Action": [
+                "sts:AssumeRole"
+              ]
+            }
+          ]
+        },
+        "Path": "/"
+      }
+    },
+    "AMISharePolicy": {
+      "DependsOn": [
+        "AMIShareRole"
+      ],
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyName": "AMISharePolicy",
+        "Roles": [
+          {
+            "Ref": "AMIShareRole"
+          }
+        ],
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": [
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:PutLogEvents"
+              ],
+              "Resource": "arn:aws:logs:*:*:*"
+            },
+            {
+              "Effect": "Allow",
+              "Action": [
+                "ec2:DescribeImageAttribute",
+                "ec2:DescribeImages",
+                "ec2:DescribeSnapshotAttribute",
+                "ec2:DescribeSnapshots",
+                "ec2:ModifySnapshotAttribute",
+                "ec2:ModifyImageAttribute"
+              ],
+              "Resource": "*"
+            }
+          ]
+        }
+      }
+    },
+    "AMIShare": {
+      "Type": "AWS::Lambda::Function",
+      "DependsOn": [
+        "AMISharePolicy"
+      ],
+      "Properties": {
+        "FunctionName": "AMIShare",
+        "Code": {
+          "S3Bucket": "<BUCKET>",
+          "S3Key": "AMI_Share.zip"
+        },
+        "Role": {
+          "Fn::GetAtt": [
+            "AMIShareRole",
+            "Arn"
+          ]
+        },
+        "Timeout": 300,
+        "Handler": "share.lambda_handler",
+        "Runtime": "python2.7",
+        "MemorySize": 128,
+        "Environment": {
+          "Variables": {
+            "region": "us-east-1",
+            "snap_accounts": "aws-marketplace",
+            "ami_accounts": "679593333241",
+            "run": false
+          }
+        }
+      }
+    },
+    "AMIShareRule": {
+      "Type": "AWS::Events::Rule",
+      "DependsOn": [
+        "AMIShare"
+      ],
+      "Properties": {
+        "Description": "ScheduledRule",
+        "ScheduleExpression": "rate(5 minutes)",
+        "State": "ENABLED",
+        "Targets": [
+          {
+            "Arn": {
+              "Fn::GetAtt": [
+                "AMIShare",
+                "Arn"
+              ]
+            },
+            "Id": "TargetFunction"
+          }
+        ]
+      }
+    },
+    "AMISharePermission": {
+      "Type": "AWS::Lambda::Permission",
+      "DependsOn": [
+        "AMIShareRule"
+      ],
+      "Properties": {
+        "FunctionName": {
+          "Ref": "AMIShare"
+        },
+        "Action": "lambda:InvokeFunction",
+        "Principal": "events.amazonaws.com",
+        "SourceArn": {
+          "Fn::GetAtt": [
+            "AMIShareRule",
+            "Arn"
+          ]
+        }
+      }
+    }
+  }
+}
