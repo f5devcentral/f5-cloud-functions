@@ -1,6 +1,38 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
   "Description": "AWS CloudFormation AMI Share Stack",
+  "Parameters": {
+    "AMIRegion": {
+      "Type": "String",
+      "Description": "The region to share the AMIs and associated Snapshots from",
+      "Default": "us-east-1"
+    },
+    "SnapAccounts": {
+      "Type": "String",
+      "Description": "The accounts to share Snapshots with",
+      "Default": "aws-marketplace"
+    },
+    "AMIAccounts": {
+      "Type": "String",
+      "Description": "The accounts to share Snapshots with",
+      "Default": "679593333241"
+    },
+    "Run": {
+      "Type": "String",
+      "Description": "Actually share the AMIs and Snapshots",
+      "Default": "false",
+      "AllowedValues": ["true", "false"]
+    },
+    "S3Bucket": {
+      "Type": "String",
+      "Description": "The bucket that the lambda function is stored in"
+    },
+    "CodeZipFile": {
+      "Type": "String",
+      "Description": "The location of the zip file containing the lambda function in the s3 bucket defined by the S3Bucket parameter",
+      "Default": "AMI_Share.zip"
+    }
+  },
   "Resources": {
     "AMIShareRole": {
       "Type": "AWS::IAM::Role",
@@ -72,8 +104,8 @@
       "Properties": {
         "FunctionName": "AMIShare",
         "Code": {
-          "S3Bucket": "<BUCKET>",
-          "S3Key": "AMI_Share.zip"
+          "S3Bucket": { "Ref": "S3Bucket" },
+          "S3Key": { "Ref": "CodeZipFile" }
         },
         "Role": {
           "Fn::GetAtt": [
@@ -87,10 +119,10 @@
         "MemorySize": 128,
         "Environment": {
           "Variables": {
-            "region": "us-east-1",
-            "snap_accounts": "aws-marketplace",
-            "ami_accounts": "679593333241",
-            "run": false
+            "region": { "Ref": "AMIRegion" },
+            "snap_accounts": { "Ref": "SnapAccounts" },
+            "ami_accounts": { "Ref": "AMIAccounts" },
+            "run": { "Ref": "Run" }
           }
         }
       }

@@ -1,6 +1,38 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
   "Description": "AWS CloudFormation AMI Prune Stack",
+  "Parameters": {
+    "ThresholdDays": {
+      "Type": "Number",
+      "Description": "The maximum number of days before an AMI without a keep tag is pruned",
+      "Default": 30
+    },
+    "PruneRegion": {
+      "Type": "String",
+      "Description": "The region to perform AMI Pruning in",
+      "Default": "us-east-1"
+    },
+    "Limit": {
+      "Type": "Number",
+      "Description": "The maximum number of AMIs to prune (doesn't affect no-op mode)",
+      "Default": 400
+    },
+    "Enable": {
+      "Type": "String",
+      "Description": "Whether or not pruning should actually be enabled (false means no-op with just logging)",
+      "Default": "false",
+      "AllowedValues": ["true", "false"]
+    },
+    "S3Bucket": {
+      "Type": "String",
+      "Description": "The bucket that the lambda function is stored in"
+    },
+    "CodeZipFile": {
+      "Type": "String",
+      "Description": "The location of the zip file containing the lambda function in the s3 bucket defined by the S3Bucket parameter",
+      "Default": "prune.zip"
+    }
+  },
   "Resources": {
     "AMIPruneRole": {
       "Type": "AWS::IAM::Role",
@@ -70,8 +102,8 @@
       "Properties": {
         "FunctionName": "AMIPrune",
         "Code": {
-          "S3Bucket": "f5-cloud-functions",
-          "S3Key": "prune.zip"
+          "S3Bucket": { "Ref": "S3Bucket" },
+          "S3Key": { "Ref": "CodeZipFile" }
         },
         "Role": {
           "Fn::GetAtt": [
@@ -85,10 +117,10 @@
         "MemorySize": 128,
         "Environment": {
           "Variables": {
-            "threshold_days": "30",
-            "enable_delete": "false",
-            "region": "us-east-1",
-            "limit": "400"
+            "threshold_days": { "Ref": "ThresholdDays" },
+            "enable_delete": { "Ref": "Enable" },
+            "region": { "Ref": "PruneRegion" },
+            "limit": { "Ref": "Limit" }
           }
         }
       }
