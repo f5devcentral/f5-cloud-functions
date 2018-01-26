@@ -1,6 +1,26 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
   "Description": "AWS CloudFormation to send GuardDuty alerts to Microsoft Teams",
+  "Parameters": {
+    "APIURL": {
+      "Type": "String",
+      "Description": "The Microsoft Teams Webhook URL to Use"
+    },
+    "SeverityThreshold": {
+      "Type": "Number",
+      "Description": "The threshold an alert must exceed in order to be sent to Microsoft Teams",
+      "Default": 2.0
+    },
+    "S3Bucket": {
+      "Type": "String",
+      "Description": "The bucket that the lambda function is stored in"
+    },
+    "CodeZipFile": {
+      "Type": "String",
+      "Description": "The location of the zip file containing the lambda function in the s3 bucket defined by the S3Bucket parameter",
+      "Default": "GuardDutyToTeams.zip"
+    }
+  },
   "Resources": {
     "GuardDutyRole": {
       "Type": "AWS::IAM::Role",
@@ -382,8 +402,8 @@
       "Properties": {
         "FunctionName": "GuardDutyToTeams",
         "Code": {
-          "S3Bucket": "<S3 BUCKET>",
-          "S3Key": "GuardDutyToTeams.zip"
+          "S3Bucket": { "Ref": "S3Bucket" },
+          "S3Key": { "Ref": "CodeZipFile" }
         },
         "Role": {
           "Fn::GetAtt": [
@@ -397,8 +417,8 @@
         "MemorySize": 128,
         "Environment": {
           "Variables": {
-            "api_url": "",
-            "severity_threshold": "2.0"
+            "api_url": { "Ref": "APIURL" },
+            "severity_threshold": { "Ref": "SeverityThreshold" }
           }
         },
         "VpcConfig": {
