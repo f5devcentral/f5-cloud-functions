@@ -14,9 +14,7 @@ Automatically prune obsolete AMIs created during your build process by deleting 
 As you can see in the table above, by default this will be in no-op mode, not actually perform the pruning, you must explicitly enable it with the enable_delete for safety while testing.
 
 ## Installation
-There are two options, you can either simply deploy it using the CloudFormation template in CloudFormation.json or you can do it by hand using the Canary example as a base (will run a lambda function at a specific interval), using the role.json to create a new role and prune.py as the code, filling in the environment variables described above, and setting up the CloudWatch event rule.
-
-Also you may want to modify the CloudFormation.json file to fit your needs.  This is set to prune AMIs daily, with all the defaults set explicitly (including being in no-op mode), so you'll want to make some adjustments to variables in there to fit your needs.
+There are two options, you can either simply deploy it using the CloudFormation template in CloudFormation.json or you can do it by hand using the Canary example as a base (will run a lambda function at a specific interval), using the role.json to create a new role and prune.py as the code, filling in the environment variables described above, and setting up the CloudWatch event rule
 
 ## Cloud Formation Diagram
 ![CloudFormation](CloudFormation.png)
