@@ -18,7 +18,5 @@ As you can see in the table above, by default this will be in no-op mode, not ac
 ## Installation
 There are two options, you can either simply deploy it using the CloudFormation template in CloudFormation.json or you can do it by hand using the Canary example as a base (will run a lambda function at a specific interval), using the policy.json to create a new policy and share.py as the code, filling in the environment variables described above, and setting up the CloudWatch event rule.
 
-You will need to modify the CloudFormation.json file to set the S3 bucket to get the zip file with the code and set the accounts you want to share to.  This is set to share unshared AMIs every 5 minutes, with all the defaults set explicitly (including being in no-op mode), so you'll want to make some adjustments to variables in there to fit your needs.
-
 ## Cloud Formation Diagram
 ![CloudFormation](CloudFormation.png)
