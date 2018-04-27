@@ -1,4 +1,5 @@
 # f5-cloud-functions
+[![Build Status](https://travis-ci.org/f5devcentral/f5-cloud-functions.svg?branch=master)](https://travis-ci.org/f5devcentral/f5-cloud-functions)
 
 ## Introduction
 At F5 we've had to create some tooling around supporting our cloud environment, validating that stuff is in conformance as well as automating menial management tasks.  These are the pieces of automation that are not F5 specific which we feel may be useful for others running into similar situations.
