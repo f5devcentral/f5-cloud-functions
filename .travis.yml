@@ -1,0 +1,15 @@
+---
+language: python
+python:
+  - "2.7"
+
+install:
+  - "pip install pylint boto3"
+
+script:
+  - "cd AWS/AMI_Prune"
+  - "pylint --errors-only *.py"
+  - "cd ../AMI_Share"
+  - "pylint --errors-only *.py"
+  - "cd ../GuardDutyToTeams"
+  - "pylint --errors-only *.py"
